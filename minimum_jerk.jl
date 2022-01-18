@@ -1,106 +1,103 @@
 module MinimumJerk
-export get_trajectory
+using LinearAlgebra, Convex, Gurobi, Plots
+export test_analytical, test_primal
 
-function get_trajectory(xi, xf, ts, traj_type="position", solve_method="analytical")
-  if solve_method == "analytical"
-    coefficients = MJAnalytical.solve_for_coefficients(xi, xf, ts)
-  elseif solve_method == "lp"
-    coefficients = MJLinearProgram.solve_for_coefficients(xi, xf, ts)
-  elseif solve_method == "dual"
-    coefficients = MJDual.solve_for_coefficients(xi, xf, ts)
+pyplot()
+Plots.PyPlotBackend()
+
+
+function eval_traj_point(t, coefficients, derivative_order, po=5)
+  if po > 5
+    println("polynomial order > 5")
+    return
+  end
+  if derivative_order == 0
+    equation = [1 t t^2 t^3 t^4 t^5]
+  elseif derivative_order == 1
+    equation = [0 1 2t 3t^2 4t^3 5t^4]
+  elseif derivative_order == 2
+    equation = [0 0 2 6t 12t^2 20t^3]
+  elseif derivative_order == 3
+    equation = [0 0 0 6 24t 60t^2]
+  elseif derivative_order == 4
+    equation = [0 0 0 0 24 120t]
+  elseif derivative_order == 5
+    equation = [0 0 0 0 0 120]
+  elseif derivative_order == 6
+    equation = [0 0 0 0 0 0]
   else
-    print("unrecognized solve method")
+    println("derivative order is too high")
     return 0
   end
-  # [eval_traj_point(t, coefficients, traj_type) for t in ts]
-  map(t -> eval_traj_point(t, coefficients, traj_type), ts)
-end
-
-function eval_traj_point(t, coefficients, traj_type)
-  if traj_type == "position"
-    equation = [1 t t^2 t^3 t^4 t^5]
-  elseif traj_type == "velocity"
-    equation = [0 1 2*t 3*t^2 4*t^3 5*t^4]
-  else
-    equation = [0 0 2 6*t 12*t^2 20*t^3]
-  end
-  first(equation * coefficients)
+  dot(equation[1:po+1], coefficients)
 end
 
 
-module MJAnalytical
-  using LinearAlgebra
-
-  function solve_for_coefficients(xi, xf, t)
-    ti = first(t) # t[begin]
-    tf = last(t) # t[end]
-    b = [xi; xf]
-    A = [
-      1 ti ti^2 ti^3   ti^4    ti^5;
-      0 1  2*ti 3*ti^2 4*ti^3  5*ti^4;
-      0 0  2    6*ti   12*ti^2 20*ti^3;
-      1 tf tf^2 tf^3   tf^4    tf^5;
-      0 1  2*tf 3*tf^2 4*tf^3  5*tf^4;
-      0 0  2    6*tf   12*tf^2 20*tf^3;
-    ]
-    inv(A) * b
+function get_matrices(xi, xf, ts, po=5, bi=[1:6])
+  if po > 5
+    println("polynomial order > 5")
+    return
   end
-
+  # po = polynomial order
+  # bi = boundary indices
+  ti = first(ts)
+  tf = last(ts)
+  P = [
+    0 0 0         0              0              0;
+    0 0 0         0              0              0;
+    0 0 0         0              0              0;
+    0 0 0 36(tf-ti) 144(tf^2-ti^2) 240(tf^3-ti^3);
+    0 0 0         0 192(tf^3-ti^3) 720(tf^4-ti^4);
+    0 0 0         0              0 720(tf^5-ti^5);
+  ]
+  A = [
+    1 ti ti^2  ti^3   ti^4   ti^5;
+    0  1  2ti 3ti^2  4ti^3  5ti^4;
+    0  0    2   6ti 12ti^2 20ti^3;
+    1 tf tf^2  tf^3   tf^4   tf^5;
+    0  1  2tf 3tf^2  4tf^3  5tf^4;
+    0  0    2   6tf 12tf^2 20tf^3;
+  ]
+  b = [xi xf]'
+  P[1:po+1, 1:po+1], A[bi, 1:po+1], b
 end
 
 
-module MJLinearProgram
-  using Convex, Gurobi
-
-  function solve_for_coefficients(xi, xf, t)
-    x = Variable(6)
-    ti = first(t) # t[begin]
-    tf = last(t) # t[end]
-    c = [0 0 0 6*(tf-ti) 12*(tf^2-ti^2) 20*(tf^3-ti^3)]'
-    A = [
-      1 ti ti^2 ti^3   ti^4    ti^5;
-      0 1  2*ti 3*ti^2 4*ti^3  5*ti^4;
-      0 0  2    6*ti   12*ti^2 20*ti^3;
-      1 tf tf^2 tf^3   tf^4    tf^5;
-      0 1  2*tf 3*tf^2 4*tf^3  5*tf^4;
-      0 0  2    6*tf   12*tf^2 20*tf^3;
-    ]
-    b = [xi; xf]
-    objective = c' * x
-    constraints = [A * x == b]
-    problem = minimize(objective, constraints)
-    solve!(problem, Gurobi.Optimizer)
-    evaluate(x)
-  end
-
+function solve_primal(P, A, b)
+  x = Variable(size(P)[1])
+  objective = quadform(x, P) # 1/2x'Px
+  constraints = [A * x == b]
+  problem = minimize(objective, constraints)
+  solve!(problem, Gurobi.Optimizer)
+  evaluate(x)
 end
 
 
-module MJDual
-  using Convex, Gurobi, LinearAlgebra
+function test_analytical()
+  xi = [0 0 0]
+  xf = [1 0 0]
+  ts = Vector(LinRange(0, 1, 10))
+  derivative_order = 0
+  polynomial_order = 5
+  boundary_indices = [1, 2, 3, 4, 5, 6]
+  _P, A, b = get_matrices(xi, xf, ts, polynomial_order, boundary_indices)
+  coefficients = inv(A) * b
+  position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
+  plot(position)
+end
 
-  function solve_for_coefficients(xi, xf, t)
-    # TODO: doesn't work yet
-    v = Variable(6)
-    ti = first(t) # t[begin]
-    tf = last(t) # t[end]
-    c = [0 0 0 6*(tf-ti) 12*(tf^2-ti^2) 20*(tf^3-ti^3)]'
-    A = [
-      1 ti ti^2 ti^3   ti^4    ti^5;
-      0 1  2*ti 3*ti^2 4*ti^3  5*ti^4;
-      0 0  2    6*ti   12*ti^2 20*ti^3;
-      1 tf tf^2 tf^3   tf^4    tf^5;
-      0 1  2*tf 3*tf^2 4*tf^3  5*tf^4;
-      0 0  2    6*tf   12*tf^2 20*tf^3;
-    ]
-    b = [xi; xf]
-    objective = -v' * b
-    constraints = [A' * v == -c]
-    problem = maximize(objective, constraints)
-    solve!(problem, Gurobi.Optimizer)
-    evaluate(v)
-  end
 
+function test_primal()
+  xi = [0 0]
+  xf = [1]
+  ts = Vector(LinRange(0, 1, 10))
+  derivative_order = 0
+  polynomial_order = 3
+  boundary_indices = [1, 2, 4]
+  P, A, b = get_matrices(xi, xf, ts, polynomial_order, boundary_indices)
+  coefficients = solve_primal(P, A, b)
+  position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
+  plot(position)
 end
 
 
