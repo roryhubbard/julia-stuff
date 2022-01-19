@@ -1,5 +1,5 @@
 module MinimumJerk
-using LinearAlgebra, Convex, Gurobi, Plots
+using LinearAlgebra, Convex, SCS, Plots
 export test_analytical, test_primal
 
 pyplot()
@@ -27,7 +27,7 @@ function eval_traj_point(t, coefficients, derivative_order, po=5)
     equation = [0 0 0 0 0 0]
   else
     println("derivative order is too high")
-    return 0
+    return
   end
   dot(equation[1:po+1], coefficients)
 end
@@ -67,7 +67,7 @@ function solve_primal(P, A, b)
   objective = quadform(x, P) # x'Px
   constraints = [A * x == b]
   problem = minimize(objective, constraints)
-  solve!(problem, Gurobi.Optimizer)
+  solve!(problem, SCS.Optimizer)
   evaluate(x)
 end
 
