@@ -38,7 +38,6 @@ function get_matrices(xi, xf, ts, po=5)
     println("polynomial order > 5")
     return
   end
-  # po = polynomial order
   ti = first(ts)
   tf = last(ts)
   P = [
@@ -65,7 +64,7 @@ end
 
 function solve_primal(P, A, b)
   x = Variable(size(P)[1])
-  objective = quadform(x, P) # 1/2x'Px
+  objective = quadform(x, P) # x'Px
   constraints = [A * x == b]
   problem = minimize(objective, constraints)
   solve!(problem, Gurobi.Optimizer)
@@ -81,7 +80,8 @@ function test_analytical()
   polynomial_order = 5
   _P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = inv(A) * b
-  position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
+  position = map(t -> eval_traj_point(t, coefficients,
+                                      derivative_order, polynomial_order), ts)
   plot(position)
 end
 
@@ -94,7 +94,8 @@ function test_primal()
   polynomial_order = 5
   P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = solve_primal(P, A, b)
-  position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
+  position = map(t -> eval_traj_point(t, coefficients,
+                                      derivative_order, polynomial_order), ts)
   plot(position)
 end
 
