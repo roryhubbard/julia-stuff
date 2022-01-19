@@ -43,12 +43,12 @@ function get_matrices(xi, xf, ts, po=5, bi=[1:6])
   ti = first(ts)
   tf = last(ts)
   P = [
-    0 0 0         0              0              0;
-    0 0 0         0              0              0;
-    0 0 0         0              0              0;
-    0 0 0 36(tf-ti) 144(tf^2-ti^2) 240(tf^3-ti^3);
-    0 0 0         0 192(tf^3-ti^3) 720(tf^4-ti^4);
-    0 0 0         0              0 720(tf^5-ti^5);
+    0 0 0              0               0              0;
+    0 0 0              0               0              0;
+    0 0 0              0               0              0;
+    0 0 0      36(tf-ti)   72(tf^2-ti^2) 120(tf^3-ti^3);
+    0 0 0  72(tf^2-ti^2)  192(tf^3-ti^3) 360(tf^4-ti^4);
+    0 0 0 120(tf^3-ti^3)  360(tf^4-ti^4) 720(tf^5-ti^5);
   ]
   A = [
     1 ti ti^2  ti^3   ti^4   ti^5;
@@ -88,12 +88,12 @@ end
 
 
 function test_primal()
-  xi = [0 0]
-  xf = [1]
+  xi = [0 0 0]
+  xf = [1 0 0]
   ts = Vector(LinRange(0, 1, 10))
   derivative_order = 0
-  polynomial_order = 3
-  boundary_indices = [1, 2, 4]
+  polynomial_order = 5
+  boundary_indices = [1, 2, 3, 4, 5, 6]
   P, A, b = get_matrices(xi, xf, ts, polynomial_order, boundary_indices)
   coefficients = solve_primal(P, A, b)
   position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
