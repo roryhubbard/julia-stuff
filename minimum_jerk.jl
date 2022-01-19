@@ -33,13 +33,12 @@ function eval_traj_point(t, coefficients, derivative_order, po=5)
 end
 
 
-function get_matrices(xi, xf, ts, po=5, bi=[1:6])
+function get_matrices(xi, xf, ts, po=5)
   if po > 5
     println("polynomial order > 5")
     return
   end
   # po = polynomial order
-  # bi = boundary indices
   ti = first(ts)
   tf = last(ts)
   P = [
@@ -58,8 +57,9 @@ function get_matrices(xi, xf, ts, po=5, bi=[1:6])
     0  1  2tf 3tf^2  4tf^3  5tf^4;
     0  0    2   6tf 12tf^2 20tf^3;
   ]
-  b = [xi xf]'
-  P[1:po+1, 1:po+1], A[bi, 1:po+1], b
+  b = collect(skipmissing([xi xf]))
+  A_row_idx = findall(!ismissing, vec([xi xf]))
+  P[1:po+1, 1:po+1], A[A_row_idx, 1:po+1], b
 end
 
 
@@ -79,8 +79,7 @@ function test_analytical()
   ts = Vector(LinRange(0, 1, 10))
   derivative_order = 0
   polynomial_order = 5
-  boundary_indices = [1, 2, 3, 4, 5, 6]
-  _P, A, b = get_matrices(xi, xf, ts, polynomial_order, boundary_indices)
+  _P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = inv(A) * b
   position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
   plot(position)
@@ -89,12 +88,11 @@ end
 
 function test_primal()
   xi = [0 0 0]
-  xf = [1 0 0]
+  xf = [1 missing 0]
   ts = Vector(LinRange(0, 1, 10))
   derivative_order = 0
   polynomial_order = 5
-  boundary_indices = [1, 2, 3, 4, 5, 6]
-  P, A, b = get_matrices(xi, xf, ts, polynomial_order, boundary_indices)
+  P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = solve_primal(P, A, b)
   position = map(t -> eval_traj_point(t, coefficients, derivative_order, polynomial_order), ts)
   plot(position)
