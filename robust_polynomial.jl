@@ -1,39 +1,10 @@
 module RobustPolynomial
-using Convex, Gurobi, LinearAlgebra, Plots
-export get_trajectory, test, test_robust
+include("utils.jl")
+using .Utils
+using LinearAlgebra, Convex, SCS, Plots
 
 pyplot()
 Plots.PyPlotBackend()
-
-
-function get_trajectory(xi, xf, ts, derivative_order=0)
-  c, A, b = get_matrices(xi, xf, ts)
-  coefficients, optimal_cost = solve_for_coefficients(c, A, b)
-  map(t -> eval_traj_point(t, coefficients, derivative_order), ts)
-end
-
-
-function eval_traj_point(t, coefficients, derivative_order)
-  if derivative_order == 0
-    equation = [1 t t^2 t^3 t^4 t^5]
-  elseif derivative_order == 1
-    equation = [0 1 2t 3t^2 4t^3 5t^4]
-  elseif derivative_order == 2
-    equation = [0 0 2 6t 12t^2 20t^3]
-  elseif derivative_order == 3
-    equation = [0 0 0 6 24t 60t^2]
-  elseif derivative_order == 4
-    equation = [0 0 0 0 24 120t]
-  elseif derivative_order == 5
-    equation = [0 0 0 0 0 120]
-  elseif derivative_order == 6
-    equation = [0 0 0 0 0 0]
-  else
-    println("derivative order is too high")
-    return 0
-  end
-  first(equation * coefficients)
-end
 
 
 function plot_trajectories(coefficients, ts)
@@ -68,7 +39,7 @@ function solve_for_coefficients(c, A, b)
   constraints = [A * x == b,
                      x >= 0]
   problem = minimize(objective, constraints)
-  solve!(problem, Gurobi.Optimizer)
+  solve!(problem, SCS.Optimizer)
   x = evaluate(x)
   basic_indices = findall(!iszero, x)
   println(basic_indices)

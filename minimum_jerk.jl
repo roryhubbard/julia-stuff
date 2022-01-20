@@ -1,65 +1,11 @@
 module MinimumJerk
+include("utils.jl")
+using .Utils
 using LinearAlgebra, Convex, SCS, Plots
-export test_analytical, test_primal
+export test_analytical, test_primal, plot_coefficients
 
 pyplot()
 Plots.PyPlotBackend()
-
-
-function eval_traj_point(t, coefficients, derivative_order, po=5)
-  if po > 5
-    println("polynomial order > 5")
-    return
-  end
-  if derivative_order == 0
-    equation = [1 t t^2 t^3 t^4 t^5]
-  elseif derivative_order == 1
-    equation = [0 1 2t 3t^2 4t^3 5t^4]
-  elseif derivative_order == 2
-    equation = [0 0 2 6t 12t^2 20t^3]
-  elseif derivative_order == 3
-    equation = [0 0 0 6 24t 60t^2]
-  elseif derivative_order == 4
-    equation = [0 0 0 0 24 120t]
-  elseif derivative_order == 5
-    equation = [0 0 0 0 0 120]
-  elseif derivative_order == 6
-    equation = [0 0 0 0 0 0]
-  else
-    println("derivative order is too high")
-    return
-  end
-  dot(equation[1:po+1], coefficients)
-end
-
-
-function get_matrices(xi, xf, ts, po=5)
-  if po > 5
-    println("polynomial order > 5")
-    return
-  end
-  ti = first(ts)
-  tf = last(ts)
-  P = [
-    0 0 0              0               0              0;
-    0 0 0              0               0              0;
-    0 0 0              0               0              0;
-    0 0 0      36(tf-ti)   72(tf^2-ti^2) 120(tf^3-ti^3);
-    0 0 0  72(tf^2-ti^2)  192(tf^3-ti^3) 360(tf^4-ti^4);
-    0 0 0 120(tf^3-ti^3)  360(tf^4-ti^4) 720(tf^5-ti^5);
-  ]
-  A = [
-    1 ti ti^2  ti^3   ti^4   ti^5;
-    0  1  2ti 3ti^2  4ti^3  5ti^4;
-    0  0    2   6ti 12ti^2 20ti^3;
-    1 tf tf^2  tf^3   tf^4   tf^5;
-    0  1  2tf 3tf^2  4tf^3  5tf^4;
-    0  0    2   6tf 12tf^2 20tf^3;
-  ]
-  b = collect(skipmissing([xi xf]))
-  A_row_idx = findall(!ismissing, vec([xi xf]))
-  P[1:po+1, 1:po+1], A[A_row_idx, 1:po+1], b
-end
 
 
 function solve_primal(P, A, b)
@@ -97,6 +43,27 @@ function test_primal()
   position = map(t -> eval_traj_point(t, coefficients,
                                       derivative_order, polynomial_order), ts)
   plot(position)
+end
+
+
+function plot_coefficients()
+  ts = Vector(LinRange(0, 1, 10))
+  derivative_order = 0
+  polynomial_order = 5
+  n = 10
+  coefficients = Vector{Float64}[]
+  for v in LinRange(-1, 1, n)
+    xi = [0 0 0]
+    xf = [1 v 0]
+    _P, A, b = get_matrices(xi, xf, ts, polynomial_order)
+    push!(coefficients, inv(A) * b)
+  end
+  coefficients = reduce(hcat, coefficients)
+  p = plot()
+  for i in 1 : polynomial_order + 1
+    plot!(p, coefficients[i, :])
+  end
+  display(p)
 end
 
 
