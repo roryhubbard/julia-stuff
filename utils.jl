@@ -1,9 +1,9 @@
 module Utils
 using LinearAlgebra
-export eval_traj_point, get_matrices
+export evaluate_polynomial, get_matrices
 
 
-function eval_traj_point(t, coefficients, derivative_order, po=5)
+function evaluate_polynomial(t, coefficients, derivative_order, po=5)
   if po > 5
     error("polynomial order > 5")
   end
@@ -58,3 +58,4 @@ end
 
 
 end
+
