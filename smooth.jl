@@ -9,10 +9,8 @@ Plots.GRBackend()
 
 
 function main()
-  xi = [0 0 0;
-        0 0 0]
-  xf = [1 0 0;
-        1 0 0]
+  xi = [0 0 0]
+  xf = [1 0 0]
   ts = Vector(LinRange(0, 1, 10))
   polynomial_order = 5
 
