@@ -1,6 +1,6 @@
 module Utils
-using LinearAlgebra
-export evaluate_polynomial, get_matrices
+using LinearAlgebra, Plots
+export evaluate_polynomial, get_matrices, plot_all
 
 
 function evaluate_polynomial(t, coefficients, derivative_order, po=5)
@@ -54,6 +54,19 @@ function get_matrices(xi, xf, ts, po=5)
   b = collect(skipmissing([xi xf]))
   A_row_idx = findall(!ismissing, vec([xi xf]))
   P[1:po+1, 1:po+1], A[A_row_idx, 1:po+1], b
+end
+
+
+function plot_all(coefficients, ts, po=5)
+  position = map(t -> evaluate_polynomial(t, coefficients, 0, po), ts)
+  velocity = map(t -> evaluate_polynomial(t, coefficients, 1, po), ts)
+  acceleration = map(t -> evaluate_polynomial(t, coefficients, 2, po), ts)
+  jerk = map(t -> evaluate_polynomial(t, coefficients, 3, po), ts)
+  p1 = plot(position)
+  p2 = plot(velocity)
+  p3 = plot(acceleration)
+  p4 = plot(jerk)
+  display(plot(p1, p2, p3, p4, layout=(2, 2)))
 end
 
 
