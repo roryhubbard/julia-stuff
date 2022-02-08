@@ -23,8 +23,7 @@ function test_analytical()
   polynomial_order = 5
   _P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = inv(A) * b
-  position = map(t -> evaluate_polynomial(t, coefficients,
-                                          derivative_order, polynomial_order), ts)
+  position = map(t -> evaluate_polynomial(t, coefficients, derivative_order), ts)
   plot(position)
 end
 
@@ -37,8 +36,7 @@ function test_primal()
   polynomial_order = 5
   P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = solve_primal(P, A, b)
-  position = map(t -> evaluate_polynomial(t, coefficients,
-                                          derivative_order, polynomial_order), ts)
+  position = map(t -> evaluate_polynomial(t, coefficients, derivative_order), ts)
   plot(position)
 end
 
@@ -64,11 +62,11 @@ function plot_coefficients()
 end
 
 
-function plot_all(coefficients, ts, po=5)
-  position = map(t -> evaluate_polynomial(t, coefficients, 0, po), ts)
-  velocity = map(t -> evaluate_polynomial(t, coefficients, 1, po), ts)
-  acceleration = map(t -> evaluate_polynomial(t, coefficients, 2, po), ts)
-  jerk = map(t -> evaluate_polynomial(t, coefficients, 3, po), ts)
+function plot_all(coefficients, ts)
+  position = map(t -> evaluate_polynomial(t, coefficients, 0), ts)
+  velocity = map(t -> evaluate_polynomial(t, coefficients, 1), ts)
+  acceleration = map(t -> evaluate_polynomial(t, coefficients, 2), ts)
+  jerk = map(t -> evaluate_polynomial(t, coefficients, 3), ts)
   p1 = plot(position)
   p2 = plot(velocity)
   p3 = plot(acceleration)

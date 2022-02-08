@@ -3,10 +3,7 @@ using LinearAlgebra
 export evaluate_polynomial, get_matrices
 
 
-function evaluate_polynomial(t, coefficients, derivative_order, po=5)
-  if po > 5
-    error("polynomial order > 5")
-  end
+function evaluate_polynomial(t, coefficients, derivative_order)
   if derivative_order == 0
     equation = [1 t t^2 t^3 t^4 t^5]
   elseif derivative_order == 1
@@ -25,6 +22,7 @@ function evaluate_polynomial(t, coefficients, derivative_order, po=5)
     println("derivative order is too high")
     return
   end
+  po = length(coefficients) - 1 # polynomial order
   dot(equation[1:po+1], coefficients)
 end
 
