@@ -1,7 +1,9 @@
 module DifferentialDriveControl
+using Plots
+export test_unicycle_model, test_differential_drive_model
 
 
-struct UnicycleKinematicModel
+mutable struct UnicycleKinematicModel
   x
   y
   yaw
@@ -9,7 +11,7 @@ struct UnicycleKinematicModel
 end
 
 
-struct DifferentialDriveKinematicModel
+mutable struct DifferentialDriveKinematicModel
   x
   y
   yaw
@@ -23,29 +25,30 @@ function update!(model::UnicycleKinematicModel, v, w, dₜ=0.01)
   G = [cos(yaw) 0;
        sin(yaw) 0;
               0 1]
-  ̇q = G * [v; w]
-  q += ̇q* dₜ
-  model.x = q[0]
-  model.y = q[1]
-  model.yaw = q[2]
+  qdot = G * [v; w]
+  qd = qdot * dₜ
+  model.x += qd[1]
+  model.y += qd[2]
+  model.yaw += qd[3]
 end
 
 
 function update!(model::DifferentialDriveKinematicModel, v, w, dₜ=0.01)
   # http://msl.cs.uiuc.edu/planning/node659.html
+  yaw = model.yaw
   r = model.r
   L = model.L
-  uₗ, uᵣ = calculate_wheel_velocities(v, w)
+  uᵣ, uₗ = calculate_wheel_velocities(model, v, w)
   uₜ = (uₗ+ uᵣ) / 2
   uᵩ = uᵣ - uₗ
   G = [r*cos(yaw)   0;
        r*sin(yaw)   0;
                 0 r/L]
-  ̇q = G * [uₜ; uᵩ]
-  q += ̇q * dₜ
-  model.x = q[0]
-  model.y = q[1]
-  model.yaw = q[2]
+  qdot = G * [uₜ; uᵩ]
+  qd = qdot * dₜ
+  model.x += qd[1]
+  model.y += qd[2]
+  model.yaw += qd[3]
 end
 
 
@@ -56,5 +59,41 @@ function calculate_wheel_velocities(model::DifferentialDriveKinematicModel, v, w
   J⁻¹ = [1/r  L/(2r);
          1/r -L/(2r)]
   J⁻¹ * [v; w]
+end
+
+
+function test_unicycle_model()
+  dd = UnicycleKinematicModel(0., 0., 0., .1)
+  v = 1.
+  w = π / 10
+  x = Vector{Float64}()
+  y = Vector{Float64}()
+  push!(x, dd.x)
+  push!(y, dd.y)
+  for _ in 1:100
+    update!(dd, v, w)
+    push!(x, dd.x)
+    push!(y, dd.y)
+  end
+  plot(x, y, aspect_ratio=:equal)
+end
+
+
+function test_differential_drive_model()
+  dd = DifferentialDriveKinematicModel(0., 0., 0., .1, .5)
+  v = 1.
+  w = π / 10
+  x = Vector{Float64}()
+  y = Vector{Float64}()
+  push!(x, dd.x)
+  push!(y, dd.y)
+  for t in 1:100
+    update!(dd, v, w)
+    push!(x, dd.x)
+    push!(y, dd.y)
+  end
+  plot(x, y, aspect_ratio=:equal)
+end
+
 end
 
