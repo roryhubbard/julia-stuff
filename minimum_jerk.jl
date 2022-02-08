@@ -4,9 +4,6 @@ using .Utils
 using LinearAlgebra, Convex, SCS, Plots
 export test_analytical, test_primal, plot_coefficients
 
-pyplot()
-Plots.PyPlotBackend()
-
 
 function solve_primal(P, A, b)
   x = Variable(size(P)[1])
@@ -26,8 +23,8 @@ function test_analytical()
   polynomial_order = 5
   _P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = inv(A) * b
-  position = map(t -> eval_traj_point(t, coefficients,
-                                      derivative_order, polynomial_order), ts)
+  position = map(t -> evaluate_polynomial(t, coefficients,
+                                          derivative_order, polynomial_order), ts)
   plot(position)
 end
 
@@ -40,8 +37,8 @@ function test_primal()
   polynomial_order = 5
   P, A, b = get_matrices(xi, xf, ts, polynomial_order)
   coefficients = solve_primal(P, A, b)
-  position = map(t -> eval_traj_point(t, coefficients,
-                                      derivative_order, polynomial_order), ts)
+  position = map(t -> evaluate_polynomial(t, coefficients,
+                                          derivative_order, polynomial_order), ts)
   plot(position)
 end
 
