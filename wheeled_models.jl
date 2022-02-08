@@ -1,4 +1,4 @@
-module DifferentialDriveControl
+module WheeledModels
 using Plots
 export test_unicycle_model, test_differential_drive_model
 
