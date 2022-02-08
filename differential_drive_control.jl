@@ -6,49 +6,48 @@ export test_unicycle_model, test_differential_drive_model
 mutable struct UnicycleKinematicModel
   x
   y
-  yaw
-  r
+  θ
 end
 
 
 mutable struct DifferentialDriveKinematicModel
   x
   y
-  yaw
+  θ
   r
   L
 end
 
 
 function update!(model::UnicycleKinematicModel, v, w, dₜ=0.01)
-  yaw = model.yaw
-  G = [cos(yaw) 0;
-       sin(yaw) 0;
-              0 1]
+  θ = model.θ
+  G = [cos(θ) 0;
+       sin(θ) 0;
+            0 1]
   qdot = G * [v; w]
   qd = qdot * dₜ
   model.x += qd[1]
   model.y += qd[2]
-  model.yaw += qd[3]
+  model.θ += qd[3]
 end
 
 
 function update!(model::DifferentialDriveKinematicModel, v, w, dₜ=0.01)
   # http://msl.cs.uiuc.edu/planning/node659.html
-  yaw = model.yaw
+  θ = model.θ
   r = model.r
   L = model.L
   uᵣ, uₗ = calculate_wheel_velocities(model, v, w)
   uₜ = (uₗ+ uᵣ) / 2
   uᵩ = uᵣ - uₗ
-  G = [r*cos(yaw)   0;
-       r*sin(yaw)   0;
-                0 r/L]
+  G = [r*cos(θ)   0;
+       r*sin(θ)   0;
+              0 r/L]
   qdot = G * [uₜ; uᵩ]
   qd = qdot * dₜ
   model.x += qd[1]
   model.y += qd[2]
-  model.yaw += qd[3]
+  model.θ += qd[3]
 end
 
 
@@ -63,37 +62,48 @@ end
 
 
 function test_unicycle_model()
-  dd = UnicycleKinematicModel(0., 0., 0., .1)
+  um = UnicycleKinematicModel(0., 0., 0.)
   v = 1.
-  w = π / 10
+  w = π
   x = Vector{Float64}()
   y = Vector{Float64}()
-  push!(x, dd.x)
-  push!(y, dd.y)
+  θ = Vector{Float64}()
+  push!(x, um.x)
+  push!(y, um.y)
+  push!(θ, um.θ)
   for _ in 1:100
-    update!(dd, v, w)
-    push!(x, dd.x)
-    push!(y, dd.y)
+    update!(um, v, w)
+    push!(x, um.x)
+    push!(y, um.y)
+    push!(θ, um.θ)
   end
-  plot(x, y, aspect_ratio=:equal)
+  p1 = plot(x, y, aspect_ratio=:equal)
+  p2 = plot(θ)
+  display(plot(p1, p2, layout=(1, 2)))
 end
 
 
 function test_differential_drive_model()
-  dd = DifferentialDriveKinematicModel(0., 0., 0., .1, .5)
+  ddm = DifferentialDriveKinematicModel(0., 0., 0., .1, .5)
   v = 1.
-  w = π / 10
+  w = π
   x = Vector{Float64}()
   y = Vector{Float64}()
-  push!(x, dd.x)
-  push!(y, dd.y)
-  for t in 1:100
-    update!(dd, v, w)
-    push!(x, dd.x)
-    push!(y, dd.y)
+  θ = Vector{Float64}()
+  push!(x, ddm.x)
+  push!(y, ddm.y)
+  push!(θ, ddm.θ)
+  for _ in 1:100
+    update!(ddm, v, w)
+    push!(x, ddm.x)
+    push!(y, ddm.y)
+    push!(θ, ddm.θ)
   end
-  plot(x, y, aspect_ratio=:equal)
+  p1 = plot(x, y, aspect_ratio=:equal)
+  p2 = plot(θ)
+  display(plot(p1, p2, layout=(1, 2)))
 end
+
 
 end
 
