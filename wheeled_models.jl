@@ -1,6 +1,6 @@
 module WheeledModels
 using Plots
-export test_unicycle_model, test_differential_drive_model
+export UnicycleKinematicModel, DifferentialDriveKinematicModel, update!
 
 
 mutable struct UnicycleKinematicModel
@@ -19,7 +19,7 @@ mutable struct DifferentialDriveKinematicModel
 end
 
 
-function update!(model::UnicycleKinematicModel, v, w, dₜ=0.01)
+function update!(model::UnicycleKinematicModel, v, w, dₜ=0.1)
   θ = model.θ
   G = [cos(θ) 0;
        sin(θ) 0;
@@ -29,10 +29,11 @@ function update!(model::UnicycleKinematicModel, v, w, dₜ=0.01)
   model.x += qd[1]
   model.y += qd[2]
   model.θ += qd[3]
+  model.θ = atan(sin(model.θ), cos(model.θ))
 end
 
 
-function update!(model::DifferentialDriveKinematicModel, v, w, dₜ=0.01)
+function update!(model::DifferentialDriveKinematicModel, v, w, dₜ=0.1)
   # http://msl.cs.uiuc.edu/planning/node659.html
   θ = model.θ
   r = model.r
@@ -48,6 +49,7 @@ function update!(model::DifferentialDriveKinematicModel, v, w, dₜ=0.01)
   model.x += qd[1]
   model.y += qd[2]
   model.θ += qd[3]
+  model.θ = atan(sin(model.θ), cos(model.θ))
 end
 
 
