@@ -2,7 +2,6 @@ module MinimumJerk
 include("utils.jl")
 using .Utils
 using LinearAlgebra, Convex, SCS, Plots
-export test_analytical, test_primal, plot_coefficients
 
 
 function solve_primal(P, A, b)
