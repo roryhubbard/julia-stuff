@@ -5,21 +5,14 @@ using .Utils
 export differential_flatness_trajectory
 
 
-function add_continuity_constraints!(problem, poly1, poly2, t)
-  problem.constraints += [
-    evaluate_polynomial(t, poly1, 0) == evaluate_polynomial(0, poly2, 0),
-    evaluate_polynomial(t, poly1, 1) == evaluate_polynomial(0, poly2, 1),
-    evaluate_polynomial(t, poly1, 2) == evaluate_polynomial(0, poly2, 2),
-    evaluate_polynomial(t, poly1, 3) == evaluate_polynomial(0, poly2, 3),
-    evaluate_polynomial(t, poly1, 4) == evaluate_polynomial(0, poly2, 4),
-  ]
+function add_continuity_constraints!(problem, poly1, poly2, t, d)
+  for i in 0:d
+    problem.constraints += evaluate_polynomial(t, poly1, i) == evaluate_polynomial(0, poly2, i)
+  end
 end
 
 
-function polynomial_trajectory(po, t)
-  if po > 5
-    error("polynomial order > 5")
-  end
+function get_jerk_matrix(po, t)
   P = [
     0 0 0      0       0      0;
     0 0 0      0       0      0;
@@ -28,14 +21,27 @@ function polynomial_trajectory(po, t)
     0 0 0  72t^2  192t^3 360t^4;
     0 0 0 120t^3  360t^4 720t^5;
   ]
+  P[1:po+1, 1:po+1]
+end
+
+
+function polynomial_trajectory(po, t)
+  if po > 5
+    error("polynomial order > 5")
+  end
+
+  P = get_jerk_matrix(po, t)
+
   xpoly1 = Variable(po+1)
   xpoly2 = Variable(po+1)
   ypoly1 = Variable(po+1)
   ypoly2 = Variable(po+1)
-  objective = (quadform(xpoly1, P[1:po+1, 1:po+1])
-               + quadform(ypoly1, P[1:po+1, 1:po+1])
-               + quadform(xpoly2, P[1:po+1, 1:po+1])
-               + quadform(ypoly2, P[1:po+1, 1:po+1]))
+
+  objective = (quadform(xpoly1, P)
+             + quadform(ypoly1, P)
+             + quadform(xpoly2, P)
+             + quadform(ypoly2, P))
+
   problem = minimize(objective)
 
   problem.constraints += [
@@ -54,8 +60,8 @@ function polynomial_trajectory(po, t)
     evaluate_polynomial(t, ypoly2, 2) == 0.,
   ]
 
-  add_continuity_constraints!(problem, xpoly1, xpoly2, t)
-  add_continuity_constraints!(problem, ypoly1, ypoly2, t)
+  add_continuity_constraints!(problem, xpoly1, xpoly2, t, po-1)
+  add_continuity_constraints!(problem, ypoly1, ypoly2, t, po-1)
 
   solve!(problem, SCS.Optimizer)
   evaluate(xpoly1), evaluate(ypoly1), evaluate(xpoly2), evaluate(ypoly2)
@@ -94,7 +100,7 @@ function differential_flatness_trajectory()
   θ = Vector{Float64}()
   v = Vector{Float64}()
   w = Vector{Float64}()
-  for t in LinRange(0, 2tp, 21)
+  for t in LinRange(0, 2tp - 0.1, 20)
     (xpoly, ypoly) = t < tp ? (xpoly1, ypoly1) : (xpoly2, ypoly2)
     t = mod(t, tp)
     x_evaluated = evaluate_polynomial(t, xpoly, 0)
